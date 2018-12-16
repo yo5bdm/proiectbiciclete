@@ -191,7 +191,6 @@ public class Comunicare extends UnicastRemoteObject implements RemoteInterface {
                 proxyCon = startClient(proxyIP);
                 me = proxyCon.getMyId(myIp);
                 log("ID-ul meu "+me.id);
-                noduri = proxyCon.getPuncte();
             }
         }
         startServer();
