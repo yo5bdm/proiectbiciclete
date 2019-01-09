@@ -188,17 +188,20 @@ public class Comunicare extends UnicastRemoteObject implements RemoteInterface {
                 lider = null;
                 me = addMe(myIp);
             } else {
+                System.out.println("ProxyIp: "+proxyIP);
                 proxyCon = startClient(proxyIP);
                 me = proxyCon.getMyId(myIp);
                 log("ID-ul meu "+me.id);
             }
         }
         startServer();
+        System.out.println("Me: "+me.id+" "+me.ip);
         syncWithLeader(true);
         new Threads("heartbeat").start();
     }
     public static void syncWithLeader(boolean init) {
         if(lider == null) { 
+            log("Incerc preluarea liderului de la alte noduri...");
             getLeaderFromOthers(); 
             try { Thread.sleep(1000); } catch (Exception ex) { }
         }
@@ -223,9 +226,10 @@ public class Comunicare extends UnicastRemoteObject implements RemoteInterface {
                     lider.con = startClient(lider.ip);
                 }
             }
-            if(!init) return;
+            if(!init) {
+            }
         } else if(iAmProxy == false) {
-            //log("TODO: if no leader, i am first to run, so maybe not obsolete???");
+            log("TODO: if no leader, i am first to run, so maybe not obsolete???");
             iAmObsolete = false;
             iAmLeader = true;
             lider = me;
@@ -237,15 +241,32 @@ public class Comunicare extends UnicastRemoteObject implements RemoteInterface {
         }
     }
     private static void getLeaderFromOthers() {
-        //log("Incerc preluarea liderului de la ceilalti pentru actualizare date");
-        for(Punct p:noduri) {
+        //get lider from proxy
+        if(noduri.isEmpty()) {
+            try {
+                lider = proxyCon.getLeader();
+            } catch (RemoteException ex) {
+                Logger.getLogger(Comunicare.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } else for(Punct p:noduri) { //try to get from others
             if(p.id == me.id) continue;
+            if(p.ip.equals(proxyIP)) {
+                try {
+                    Punct ldr = proxyCon.getLeader();
+                    System.out.println("Primit de la proxy "+ldr.ip);
+                    if(lider == null) lider = ldr;
+                } catch (RemoteException ex) {
+                    Logger.getLogger(Comunicare.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                continue;
+            }
             new Thread(){
                 public void run() {
                     for(int i=0;i<2;i++) {//try 2 times
                         if(p.con == null) p.con = startClient(p.ip); //reset connection
                         if(p.con != null) try { 
                             Punct ldr = p.con.getLeader(); 
+                            System.out.println("Primit de la proxy "+ldr.ip);
                             if(lider == null) lider = ldr;
                             //else if(lider.id != ldr.id) Comunicare.log("Primit lider cu id diferit de ce stiam eu...");
                             break;
@@ -299,6 +320,7 @@ public class Comunicare extends UnicastRemoteObject implements RemoteInterface {
 //metodele liderului
     public static void announceLeader() {
         iAmLeader = true;
+        lider = me;
         for(Punct p:noduri) {
             if(p.id == me.id) continue;
             new Thread(){

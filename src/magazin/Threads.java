@@ -40,6 +40,8 @@ public class Threads extends Thread {
         Comunicare.log("Pornesc Thread de heartbeat...");
         while(true) {
             try { Thread.sleep(2000); } catch (InterruptedException ex) { }
+            if(Comunicare.lider!=null && Comunicare.me.id < Comunicare.lider.id)
+                Comunicare.lider = null;
             if(!Comunicare.iAmLeader && !Comunicare.electing) {
                 if(Comunicare.lider!=null) {                    
                     heartbeat = true;
